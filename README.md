@@ -36,6 +36,13 @@ User (Gradio UI) → Chat Input
 # Install dependencies
 pip install -r requirements.txt
 
+# There could be mistmatch due to gradio and mem0 version
+# Here is my setup:
+gradio                            5.22.0
+gradio_client                     1.8.0
+gradio_webrtc                     0.0.31
+mem0ai                            1.0.3
+
 # Run the app
 python app.py
 ```
