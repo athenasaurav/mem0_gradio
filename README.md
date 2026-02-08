@@ -16,7 +16,7 @@ A Gradio-based chat application with **long-term memory** powered by [Mem0](http
 ## Architecture
 
 ```
-User (Gradio UI) → Chat Input
+  User (Gradio UI) → Chat Input
         ↓
   Search Mem0 for relevant memories
         ↓
