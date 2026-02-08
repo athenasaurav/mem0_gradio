@@ -1,0 +1,4 @@
+gradio
+openai
+mem0ai
+python-dotenv
