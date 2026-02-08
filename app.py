@@ -6,6 +6,11 @@ from openai import OpenAI
 from mem0 import MemoryClient
 
 # ---------------------------------------------------------------------------
+# Gradio version detection
+# ---------------------------------------------------------------------------
+GRADIO_MAJOR = int(gr.__version__.split(".")[0])
+
+# ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 logging.basicConfig(
@@ -56,14 +61,14 @@ def fetch_models(api_key: str):
 # Memory helpers (sync — Gradio runs in threads)
 # ---------------------------------------------------------------------------
 
-def search_memory(mem_client, messages: list[dict], user_id: str) -> tuple[list[dict], int]:
+def search_memory(mem_client, messages: list, user_id: str):
     """Search Mem0 for relevant memories and inject into system prompt.
     Returns (updated_messages, memory_count)."""
     if mem_client is None:
         return messages, 0
 
     # Build query from last 2 user + 2 assistant messages
-    collected: list[tuple[str, str]] = []
+    collected = []
     counts = {"user": 0, "assistant": 0}
     for message in reversed(messages):
         role = message.get("role")
@@ -84,14 +89,22 @@ def search_memory(mem_client, messages: list[dict], user_id: str) -> tuple[list[
     ).strip()
 
     try:
-        results = mem_client.search(query=query, user_id=user_id)
+        results = mem_client.search(
+            query=query,
+            filters={"AND": [{"user_id": user_id}]},
+            version="v2",
+        )
     except Exception as e:
         logger.warning(f"Memory search failed: {e}")
         return messages, 0
 
     lines = []
-    if isinstance(results, list):
-        for item in results:
+    # v2 may return {"results": [...]} or a plain list
+    items = results
+    if isinstance(results, dict) and "results" in results:
+        items = results["results"]
+    if isinstance(items, list):
+        for item in items:
             if isinstance(item, dict):
                 content = item.get("memory") or item.get("content") or item.get("text")
             else:
@@ -128,7 +141,7 @@ def search_memory(mem_client, messages: list[dict], user_id: str) -> tuple[list[
     return deduped, len(lines)
 
 
-def add_memory(mem_client, user_id: str, messages: list[dict]):
+def add_memory(mem_client, user_id: str, messages: list):
     """Store conversation messages in Mem0."""
     if mem_client is None:
         return
@@ -149,15 +162,15 @@ def add_memory(mem_client, user_id: str, messages: list[dict]):
 # ---------------------------------------------------------------------------
 
 def chat_respond(
-    user_message: str,
-    history: list[dict],
-    openai_key: str,
-    mem0_key: str,
-    model_name: str,
-    system_prompt: str,
-    phone_number: str,
-    max_tokens: int,
-    temperature: float,
+    user_message,
+    history,
+    openai_key,
+    mem0_key,
+    model_name,
+    system_prompt,
+    phone_number,
+    max_tokens,
+    temperature,
 ):
     """Process a user message: search memory -> call LLM -> save memory -> stream response."""
 
@@ -272,6 +285,18 @@ def chat_respond(
 # ---------------------------------------------------------------------------
 
 def build_ui():
+    # Chatbot kwargs — handle differences between Gradio versions
+    chatbot_kwargs = dict(
+        label="Chat",
+        height=620,
+    )
+    if GRADIO_MAJOR >= 6:
+        chatbot_kwargs["buttons"] = ["copy", "copy_all"]
+    else:
+        chatbot_kwargs["show_copy_button"] = True
+        # Gradio 4.x defaults to 'tuples' format; must explicitly set 'messages'
+        chatbot_kwargs["type"] = "messages"
+
     with gr.Blocks(title="Memory Chat Agent") as demo:
         gr.Markdown(
             "# 🧠 Long-Term Memory Chat Agent\n"
@@ -343,11 +368,7 @@ def build_ui():
 
             # ---- Right: Chat area ----
             with gr.Column(scale=2):
-                chatbot = gr.Chatbot(
-                    label="Chat",
-                    height=620,
-                    buttons=["copy", "copy_all"],
-                )
+                chatbot = gr.Chatbot(**chatbot_kwargs)
                 with gr.Row():
                     user_input = gr.Textbox(
                         placeholder="Type your message here...",
