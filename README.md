@@ -2,7 +2,6 @@
 
 A Gradio-based chat application with **long-term memory** powered by [Mem0](https://mem0.ai/) and [OpenAI](https://openai.com/) models. Users are identified by phone number (hashed to UUID) so memories persist across sessions.
 
-Based on the architecture from [Hugo Pod's tutorial](https://www.youtube.com/watch?v=SNCvHIYiKkg), rebuilt as an interactive Gradio UI.
 
 ## Features
 
