@@ -42,6 +42,7 @@ gradio                            5.22.0
 gradio_client                     1.8.0
 gradio_webrtc                     0.0.31
 mem0ai                            1.0.3
+openai                            2.17.0
 
 # Run the app
 python app.py
